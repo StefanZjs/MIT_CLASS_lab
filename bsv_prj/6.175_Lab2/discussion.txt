@@ -1,0 +1,30 @@
+1. Hardware-wise, unsigned addition is the same as signed addition when using two's complement encoding. 
+   Using evidence from the test bench, is unsigned multiplication the same as signed multiplication?
+   
+   When both input data are unsigned ,the results are the same;
+   When one input data is unsigned other is signed,the results are not the same;
+
+2. What is that error? How does the original code fix the compilation error?
+ Error:Unbound variable `test_function'
+    input data width 'n' is not defined, the original code defined data width 'n' = 8
+
+   Why is two function definitions not necessary?
+    you can find in "mkTbMulFunction" both functions use the same variable : 'n'.
+
+3. Is your implementation of multiply_by_adding a signed multiplier or an unsigned multiplier?
+    
+    an signed multiplier
+
+4.
+Current Bits | Previous Bit | Original Booth Encoding | Radix-4 Booth Encoding
+-------------+--------------+-------------------------+-----------------------
+    00       |      0       |                         |           
+    00       |      1       |                         |           
+    01       |      0       |           +-            |         0+
+    01       |      1       |                         |           
+    10       |      0       |                         |           
+    10       |      1       |                         |           
+    11       |      0       |                         |           
+    11       |      1       |                         |           
+
+5.
