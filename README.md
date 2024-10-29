@@ -40,4 +40,12 @@ docker exec -it --privileged=true -u=root 【container name or ID】 /bin/bash
 
 WSL默认用户名是root，如果不是，那么将代码中的‘root’替换为目标用户名。
 
+## Lab开发记录
+
+- Lab2：对有数字电路经验的同学，可以不用看电路了，但是还是要先看PPT，按照课件PPT设计思路，增加一个add_n的function，别直接用‘+’！！！
+
 ## BSV语法记录
+
+### rule
+
+- guard : 如果guard不成立，rule内的所有逻辑都不会运行。
