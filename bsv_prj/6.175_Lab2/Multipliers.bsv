@@ -134,27 +134,54 @@ module mkBoothMultiplier( Multiplier#(n) );
     Reg#(Bit#(TAdd#(TAdd#(n,n),1))) p <- mkRegU;
     Reg#(Bit#(TAdd#(TLog#(n),1))) i <- mkReg( fromInteger(valueOf(n)+1) );
 
-    rule mul_step;
+    rule mul_step( i < fromInteger(valueOf(n)) );
         // TODO: Implement this in Exercise 6
+        i <= i + 1;
+
+        Bit#(2) pr = p[1:0];
+        Int#(TAdd#(TAdd#(n,n),1)) p_tmp = unpack(p);
+        
+        if ( pr == 2'b01 ) begin
+            p_tmp = unpack(p + m_pos);
+        end
+        if ( pr == 2'b10 ) begin
+            p_tmp = unpack(p + m_neg);
+        end
+        p <= pack(p_tmp >> 1);
+
     endrule
 
     method Bool start_ready();
         // TODO: Implement this in Exercise 6
-        return False;
+        return (i == fromInteger(valueOf(n)+1)) ? True : False;
     endmethod
 
     method Action start( Bit#(n) m, Bit#(n) r );
         // TODO: Implement this in Exercise 6
+
+        Bit#(n) cmp_m = ~m + 1;
+        if(i == fromInteger(valueOf(n) + 1)) begin
+            m_pos <= {      m     ,  'b0};
+            m_neg <= {      cmp_m ,  'b0};
+            p     <= {'b0 , r     , 1'b0};
+            i     <= 0;
+        end
+
     endmethod
 
     method Bool result_ready();
         // TODO: Implement this in Exercise 6
-        return False;
+        return (i == fromInteger(valueOf(n))) ? True : False;
     endmethod
 
     method ActionValue#(Bit#(TAdd#(n,n))) result();
         // TODO: Implement this in Exercise 6
-        return 0;
+        Bit#(TAdd#(n,n)) result_w = 0;
+        if(i == fromInteger(valueOf(n))) begin
+            i <= i + 1;
+            result_w = p[valueOf(TAdd#(n,n)) : 1];
+        end
+        return result_w;
     endmethod
 endmodule
 
@@ -167,27 +194,57 @@ module mkBoothMultiplierRadix4( Multiplier#(n) );
     Reg#(Bit#(TAdd#(TAdd#(n,n),2))) p <- mkRegU;
     Reg#(Bit#(TAdd#(TLog#(n),1))) i <- mkReg( fromInteger(valueOf(n)/2+1) );
 
-    rule mul_step;
+    rule mul_step( i < fromInteger(valueOf(n)/2) );
         // TODO: Implement this in Exercise 8
+        i <= i + 1;
+
+        Bit#(3) pr = p[2:0];
+        Int#(TAdd#(TAdd#(n,n),2)) p_tmp = unpack(p);
+
+        case(pr)
+            'b001 : p_tmp   = unpack(p + m_pos);
+            'b010 : p_tmp   = unpack(p + m_pos);
+            'b011 : p_tmp   = unpack(p + (m_pos << 1));
+            'b100 : p_tmp   = unpack(p + (m_neg << 1));
+            'b101 : p_tmp   = unpack(p + m_neg);
+            'b110 : p_tmp   = unpack(p + m_neg);
+            default : p_tmp = unpack(p);
+        endcase
+        p <= pack(p_tmp >> 2);
+
     endrule
 
     method Bool start_ready();
         // TODO: Implement this in Exercise 8
-        return False;
+        return (i == fromInteger(valueOf(n)/2+1)) ? True : False;
     endmethod
 
     method Action start( Bit#(n) m, Bit#(n) r );
         // TODO: Implement this in Exercise 8
+        Bit#(n) cmp_m = ~m + 1;
+
+        if(i == fromInteger(valueOf(n)/2 + 1)) begin
+            m_pos <= {     m[valueOf(n)-1] ,      m ,  'b0};
+            m_neg <= { cmp_m[valueOf(n)-1] ,  cmp_m ,  'b0};
+            p     <= {                 'd0 ,      r , 1'b0};
+            i     <= 0;
+        end
     endmethod
 
     method Bool result_ready();
         // TODO: Implement this in Exercise 8
-        return False;
+        return (i == fromInteger(valueOf(n)/2)) ? True : False;
     endmethod
 
     method ActionValue#(Bit#(TAdd#(n,n))) result();
         // TODO: Implement this in Exercise 8
-        return 0;
+        Bit#(TAdd#(n,n)) result_w = 0;
+        if(i == fromInteger(valueOf(n)/2)) begin
+            i <= i + 1;
+            //with MSB and LSB chopped off
+            result_w =  p[valueOf(TAdd#(n,n)) : 1];
+        end
+        return result_w;
     endmethod
 endmodule
 
