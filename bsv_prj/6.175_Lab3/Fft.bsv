@@ -95,19 +95,23 @@ module mkFftFolded(Fft);
 
     rule doFft;
         //TODO: Implement the rest of this module
-        if(stage_ctrl == 2) begin  //3 cycle control
-            stage_ctrl <= 0;
-            outFifo.enq(stage_f(0, stage_reg)); //write to outFifo in 3rd cycle
-        end else begin
-            stage_ctrl <= stage_ctrl + 1;
-        end
-
-        if( stage_ctrl == 0) begin
-            inFifo.deq;
-            stage_reg <= stage_f(stage_ctrl, inFifo.first);
-        end else begin
-            stage_reg <= stage_f(stage_ctrl, stage_reg);
-        end
+            let stage_in = ?;
+            if(stage_ctrl == 0) begin
+                inFifo.deq;
+                stage_in = inFifo.first;
+            end 
+            else begin
+                stage_in = stage_reg; 
+            end
+            let stage_out = stage_f(stage_ctrl, stage_in);
+    
+            if(stage_ctrl == 2) begin 
+                stage_ctrl <= 0;
+                outFifo.enq(stage_out); //write to outFifo in 3rd cycle
+            end else begin
+                stage_ctrl <= stage_ctrl + 1;
+                stage_reg <= stage_out;
+            end
 
     endrule
 
