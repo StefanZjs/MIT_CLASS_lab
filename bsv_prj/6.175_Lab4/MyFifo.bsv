@@ -13,6 +13,7 @@ interface Fifo#(numeric type n, type t);
     method Action clear;
 endinterface
 
+//Exercise 1 (5 points): Implement mkMyConflictFifo
 /////////////////
 // Conflict FIFO
 
@@ -28,7 +29,54 @@ module mkMyConflictFifo( Fifo#(n, t) ) provisos (Bits#(t,tSz));
     // useful value
     Bit#(TLog#(n))          max_index = fromInteger(valueOf(n)-1);
 
+    Reg#(Bit#(TLog#(n)))    fifo_cnt <- mkReg(0);
+
     // TODO: Implement all the methods for this module
+    rule empty_gen;
+        if(enqP == deqP && fifo_cnt == 0) begin
+            empty <= True;
+        end else begin
+            empty <= False;
+        end
+    endrule
+
+    rule full_gen;
+        if(enqP == deqP  && fifo_cnt == max_index) begin
+            full <= True;
+        end else begin
+            full <= False;
+        end
+    endrule
+
+    method Action clear;
+        enqP <= 0;
+        deqP <= 0;
+        fifo_cnt <= 0;
+    endmethod
+
+    method Action enq(t x);
+        enqP        <= enqP + 1;
+        fifo_cnt    <= fifo_cnt + 1;
+        data(enqP)  <= x;
+    endmethod
+
+    method Bool notFull();
+        return !full;
+    endmethod
+
+    method Bool notEmpty();
+        return !empty;
+    endmethod
+
+    method Action deq ;
+        deqP     <= deqP + 1;
+        fifo_cnt <= fifo_cnt - 1;
+    endmethod
+
+    method t first;
+        return data(deqP);
+    endmethod
+
 endmodule
 
 /////////////////
