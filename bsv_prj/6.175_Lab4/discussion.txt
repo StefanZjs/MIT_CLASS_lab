@@ -2,23 +2,23 @@
     methods of mkMyConflictFifo?
 
 notEmpty
-    read:
+    read: empty
     written:
 first
-    read:
+    read: empty, data, deqP
     written:
 deq
-    read:
-    written:
+    read: empty, deqP, enqP
+    written: deqP, empty, full
 notFull
-    read:
+    read:full
     written:
 enq
-    read:
-    written:
+    read: full, enqP, deqP
+    written: enqP, full, empty
 clear
-    read:
-    written:
+    read: 
+    written: enqP, deqP, full, empty
 
 
 
@@ -26,17 +26,17 @@ clear
 
            notEmpty   first   deq   notFull   enq   clear
          +----------+-------+-----+---------+-----+-------+
-notEmpty |          |       |     |         |     |       |
+notEmpty |    CF    |   CF  |  >  |    CF   |  >  |   >   |
          +----------+-------+-----+---------+-----+-------+
-first    |          |       |     |         |     |       |
+first    |    CF    |   CF  |  >  |    CF   |  CF |   >   |
          +----------+-------+-----+---------+-----+-------+
-deq      |          |       |     |         |     |       |
+deq      |    <     |   <   |  C  |    <    |  C  |   C   |
          +----------+-------+-----+---------+-----+-------+
-notFull  |          |       |     |         |     |       |
+notFull  |    CF    |   CF  |  >  |    CF   |  >  |   >   |
          +----------+-------+-----+---------+-----+-------+
-enq      |          |       |     |         |     |       |
+enq      |    <     |   CF  |  C  |    <    |  C  |   C   |
          +----------+-------+-----+---------+-----+-------+
-clear    |          |       |     |         |     |       |
+clear    |    <     |   <   |  C  |    <    |  C  |   CF  |
          +----------+-------+-----+---------+-----+-------+
 
 
@@ -44,10 +44,14 @@ clear    |          |       |     |         |     |       |
 3. Which conflicts from mkMyConflictFifo do not match the conflict-free FIFO
     scheduling constraints?
 
+    Conflict free fifo:
+        {notFull, enq} CF {notEmpty, first, deq}
+        {notFull, enq, notEmpty, first, deq} < clear
+
+    do not match in mkMyConflictFifo:
+    -->  {enq} C {deq}
+    -->  {enq} C {deq} C {clear}
 
 
 4. In your design of the clear method in mkMyCFFifo, how did you force the
     scheduling constraint {enq, deq} < clear?
-
-
-
