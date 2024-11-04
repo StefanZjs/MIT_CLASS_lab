@@ -85,38 +85,57 @@ endmodule
 module mkMyPipelineFifo( Fifo#(n, t) ) provisos (Bits#(t,tSz));
     // n is size of fifo
     // t is data type of fifo
-    Vector#(n, Reg#(t))              data       <- replicateM(mkRegU());
-    Ehr#(3, Bit#(TLog#(TAdd#(n,1)))) elem_count <- mkEhr(0);
-    Ehr#(3, Bit#(TLog#(n)))          enq_p      <- mkEhr(0);
-    Ehr#(3, Bit#(TLog#(n)))          deq_p      <- mkEhr(0);
+    Vector#(n, Reg#(t))     data     <- replicateM(mkRegU());
+    Ehr#(3, Bit#(TLog#(n))) enqP     <- mkEhr(0);
+    Ehr#(3, Bit#(TLog#(n))) deqP     <- mkEhr(0);
+    Ehr#(3, Bool)           empty    <- mkEhr(True);
+    Ehr#(3, Bool)           full     <- mkEhr(False);
 
-    method Action clear;
-        enq_p[2]      <= 0;
-        deq_p[2]      <= 0;
-        elem_count[2] <= 0;
-    endmethod
-
-    method Action enq(t x) if(elem_count[1] != fromInteger(valueOf(n)));
-        enq_p[1]       <= enq_p[1] + 1;
-        elem_count[1]  <= elem_count[1] + 1;
-        data[enq_p[1]] <= x;
-    endmethod
+    // useful value
+    Bit#(TLog#(n))          max_index = fromInteger(valueOf(n)-1);
 
     method Bool notFull();
-        return elem_count[1] != fromInteger(valueOf(n));
+        return !full[1];
+    endmethod
+
+    method Action enq(t x) if (!full[1]);
+        data[enqP[1]] <= x;
+        let next_enqP = enqP[1] + 1;
+        if (next_enqP > max_index) begin
+            next_enqP = 0;
+        end
+        if (next_enqP == deqP[1]) begin
+            full[1] <= True;
+        end
+        enqP[1] <= next_enqP;
+        empty[1] <= False;
     endmethod
 
     method Bool notEmpty();
-        return elem_count[0] != 0;
+        return !empty[0];
     endmethod
 
-    method Action deq if(elem_count[0] != 0);
-        deq_p[0]       <= deq_p[0] + 1;
-        elem_count[0]  <= elem_count[0] - 1;
+    method Action deq() if (!empty[0]);
+        let next_deqP = deqP[0] + 1;
+        if (next_deqP > max_index) begin
+            next_deqP = 0;
+        end
+        if (next_deqP == enqP[0]) begin
+            empty[0] <= True;
+        end
+        deqP[0] <= next_deqP;
+        full[0] <= False;
     endmethod
 
-    method t first if (elem_count[0] != 0);
-        return data[deq_p[0]];
+    method t first() if (!empty[0]);
+        return data[deqP[0]];
+    endmethod
+
+    method Action clear();
+        enqP[2] <= 0;
+        deqP[2] <= 0;
+        empty[2] <= True;
+        full[2] <= False;
     endmethod
 
 endmodule
