@@ -223,7 +223,8 @@ module mkMyCFFifo( Fifo#(n, t) ) provisos (Bits#(t,tSz));
 
     // useful value
     Bit#(TLog#(n))          max_index = fromInteger(valueOf(n)-1);
-
+    (* no_implicit_conditions *)
+    (* fire_when_enabled *)
     rule process_ctrl;
         if( clearEhr[1] ) begin
             enqP <= 0;

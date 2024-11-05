@@ -30,6 +30,13 @@ module mkTbBypassFunctional();
 endmodule
 
 (* synthesize *)
+module mkTbCFNCFunctional();
+    Fifo#(3, Bit#(8)) fifo <- mkMyCFFifo();
+    Bool has_clear = False; // CF but no clear method
+    let m <- mkTbFunctionalTemplate( fifo, CF, has_clear );
+endmodule
+
+(* synthesize *)
 module mkTbCFFunctional();
     Fifo#(3, Bit#(8)) fifo <- mkMyCFFifo();
     Bool has_clear = False;
@@ -67,6 +74,12 @@ endmodule
 module mkTbBypassScheduling();
     Bool has_clear = True;
     let m <- mkTbSchedulingTemplate( mkMyBypassFifo, Bypass, has_clear );
+endmodule
+
+(* synthesize *)
+module mkTbCFNCScheduling();
+    Bool has_clear = False; // CF but no clear method
+    let m <- mkTbSchedulingTemplate( mkMyCFFifo, CF, has_clear );
 endmodule
 
 (* synthesize *)
