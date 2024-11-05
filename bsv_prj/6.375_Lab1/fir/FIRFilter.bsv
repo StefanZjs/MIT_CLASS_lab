@@ -4,6 +4,7 @@ import Vector :: *;
 
 import AudioProcessorTypes :: *;
 import FilterCoefficients :: *;
+import Multiplier :: *;
 
 // The FIR Filter Module Definition 
 // in section 4.2
@@ -96,6 +97,43 @@ module mkFIRFilter(AudioProcessor);
     FIFO#(Sample) outfifo <- mkFIFO();
 
     Vector#(9, Multiplier) multipliers <- replicateM(mkMultiplier());
+    Vector#(8, Reg#(Sample)) r <- replicateM(mkReg(0));
+
+
+    rule process_in;
+        Sample sample = infifo.first();
+        infifo.deq();
+
+        r[0] <= sample;
+        for (Integer i = 1; i < 8; i = i + 1) begin
+            r[i] <= r[i - 1];
+        end
+
+        multipliers[0].putOperands(c[0],sample);
+        for (Integer i = 1; i < 9; i = i + 1) begin
+            multipliers[i].putOperands(c[i],r[i-1]);
+        end
+    endrule
+
+    rule process_out;
+
+        Vector#(9, FixedPoint#(16, 16)) v;
+        for (Integer i = 0; i< 9;i =i +1) begin
+            v[i] <- multipliers[i].getResult();
+        end
+
+        FixedPoint#(16, 16) accumulate = fold(\+ , v);
+
+        outfifo.enq(fxptGetInt(accumulate));
+    endrule
 
     
+    method Action putSampleInput(Sample in);
+        infifo.enq(in);
+    endmethod
+    method ActionValue#(Sample) getSampleOutput();
+        outfifo.deq();
+        return outfifo.first();
+    endmethod
+
 endmodule
