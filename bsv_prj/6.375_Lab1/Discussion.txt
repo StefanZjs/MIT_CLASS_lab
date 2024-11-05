@@ -1,0 +1,48 @@
+ 1. In section 4.3 we asked you to compare the hardware generated for the FIR lter before using
+ for-loops, and then again after. 
+ How does using for-loops in the Bluespec source code change the hardware the compiler generates for the FIR filter? 
+    When using for-loops,the compile will unfold the for-loops which has the same result as using multiple Regs.
+
+ How has the area and critical-path delay of your hardware change by using for-loops in Bluespec?
+    The area and critical-path delay have no change.
+
+2. How many lines of code would you have to change in the original filter description without
+ a for-loop and vectors if we wanted to turn it into a 16 tap FIR lter? 
+ 8 lines for Regs define,8 lines for Regs,8 lines for accumulate
+    so,24 lines in total.
+
+
+ How many lines of code have to change in the version with the for-loop? A 256 tap FIR lter? 
+    1 line for Regs define,1 lines for Regs 'for-loop',1 lines for accumulate
+    3 lines in total.
+
+ Comment on how for-loops can be used to write source code which is more generic and easily reusable in
+ di erent situations.
+
+ example: (fake code)
+            Vector#(n, Reg#(Sample)) r <- replicateM(mkReg(0));
+
+            for (Integer i = 0; i < n-1; i = i+1) begin
+                if(i==0)
+                    r[i] <= sample;
+                else
+                    r[i+1] <= r[i];
+            end
+            for (Integer i = 0; i < n-1; i = i+1) begin
+                if(i==0)
+                    accumulate = c[i] * fromInt(sample);
+                else
+                    accumulate = accumulate + c[i] * fromInt(r[i]);
+            end
+            
+3. After switching your filter to use the multistage multiplier in place of the Verilog * operator,
+ the builders of the multiplier discover an enhancement they can make to their implementation
+ of the multiplier. How does your implementation of the lter have to change to accommodate
+ the new implementation of the multiplier assuming the multiplier interface stays the same?
+
+
+4. After you successfully changed FIR lter using multi-stage multipliers, how do the area and
+ critical path delay compare with results from unstatic and statically elaborated Bluespec code
+ in sections 4.2 and 4.3?
+
+    the area has been bigger , but critical path delay has been less.
