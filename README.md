@@ -45,6 +45,38 @@ WSL默认用户名是root，如果不是，那么将代码中的‘root’替换
 - Lab2：对有数字电路经验的同学，可以不用看电路了，但是还是要先看PPT，按照课件PPT设计思路，增加一个add_n的function，别直接用‘+’！！！
 - Lab3：具体见6.175Lab3 Exercise2.md
 
+### RISCV
+
+#### Lab5:
+
+1. 开发环境搭建：
+   riscv-gcc编译工具链：github上有prebuild的工具链，直接下载下来解压到/opt/riscv
+   elf2hex：可以从此链接获取([elf2hex](https://github.com/riscvarchive/riscv-fesvr))，不过需要编译。我已经编译好并上传了，可以直接下载下来放到/opt/riscv/bin
+2. 几个注意事项：
+   run_xxx.sh脚本修改：在脚本里去掉这个`&`，如果不去掉，你的测试程序会在后台同时运行好多个，导致仿真时间极长而且会把CPU使用率占到100%。
+
+   ![1730980569254](images/README/1730980569254.png)
+
+   programs/assembly programs/benchmarks下的makefile：最近的riscv-isa将csr单独作为了一项扩展指令集，这个程序有点老了，用新的gcc直接编译会报-zicsr错误，需要在march后面添加_zicsr，具体方法请查看我lab5下的makefile。
+
+   /logs：仿真时会产生log文件，如果你的riscv设计错误，在仿真时可能会一直在log文件里打印调试信息，log文件会变的超级大，这时你可以选择ctrl+c中断仿真或者在程序里加入$finish主动中断。
+
+   main.cpp：我找到的课程代码中第31行`(1>>16)`应该修改为`(1<<16)`
+3. 个人建议/提示：
+
+   指令集学习：初学的话可以不用看完全部指令集，主要是看看JAL/JALR/branch这些命令（这些跟PC控制有关）
+4. Exercise设计：
+
+   -- Exercise1：设计一个von Neumann架构的twocycle核，注意此设计是使用一个mem，课程代码提供的onecycle使用了两个mem。
+
+   -- Exercise2：设计一个fourcycle核，注意此设计需要使用一个delayed memory，所以需要在fetch阶段先请求数据，在decode阶段拿到数据（指令）再进行处理。
+
+   -- Exercise3：
+
+   -- Exercise4：
+5. e
+6. e
+
 ## BSV语法记录
 
 ### rule
