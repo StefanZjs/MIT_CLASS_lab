@@ -1,127 +1,107 @@
 // FourCycle.bsv
 //
-// This is a four cycle implementation of the RISC-V processor.
+// This is a four cycle implementation of the SMIPS processor.
 
 import Types::*;
 import ProcTypes::*;
+// import MemTypes::*;
 import CMemTypes::*;
-import MemInit::*;
 import RFile::*;
 import DelayedMemory::*;
+import MemInit::*;
 import Decode::*;
 import Exec::*;
-import CsrFile::*;
+// import Cop::*;
 import Vector::*;
 import Fifo::*;
 import Ehr::*;
 import GetPut::*;
+import CsrFile::*;
 
-
-typedef enum {
-	Fetch,
-	Decode,
-	Execute,
-	WriteBack
-} Stage deriving(Bits, Eq, FShow);
+typedef enum {Fetch, Decode, Execute, WriteBack} Stage deriving (Bits, Eq, FShow);
 
 (* synthesize *)
 module mkProc(Proc);
-    Reg#(Addr)    pc <- mkRegU;
-    RFile         rf <- mkRFile;
+    Reg#(Addr)     pc <- mkRegU;
+    RFile          rf <- mkRFile;
     DelayedMemory mem <- mkDelayedMemory;
-	let dummyInit     <- mkDummyMemInit;
-    CsrFile       csrf <- mkCsrFile;
+    CsrFile      csrf <- mkCsrFile;
 
-    Bool memReady = mem.init.done && dummyInit.done;
+    // MemInitIfc dummyMemInit <- mkDummyMemInit;
+    Bool memReady = mem.init.done() ;//&& dummyMemInit.done();
+    // Reg#(Data)          f2d <- mkRegU;
+    Reg#(DecodedInst)   d2e <- mkRegU;
+    Reg#(ExecInst)     e2wb <- mkRegU;
+
+    Reg#(Stage) stage_ctrl <- mkReg(Fetch);
+    // TODO: Complete the implementation of this processor
     rule test (!memReady);
-       let e = tagged InitDone;
-       mem.init.request.put(e);
-       dummyInit.request.put(e);
+        let e = tagged InitDone;
+        mem.init.request.put(e);
     endrule
 
-    //state tracker and intermediate value regs
-    Reg#(Stage) state <- mkReg(Fetch); 
-    Reg#(DecodedInst) dInst <- mkRegU;
-    Reg#(ExecInst) eInst <- mkRegU;
-
-    rule doFetch(csrf.started && state == Fetch);
-
-        // request load of pc from mem (no response)
+    rule fetch_cycle(csrf.started && stage_ctrl == Fetch);
+        stage_ctrl <= Decode;
         mem.req(MemReq{op: Ld, addr: pc, data: ?});
-
-        //change state to decode
-        state <= Decode;
- 
     endrule
 
-    rule doDecode(csrf.started && state == Decode);
+    rule decode_cycle(csrf.started && stage_ctrl == Decode);
+        stage_ctrl <= Execute;
+        Data inst <- mem.resp();
+        // trace - print the instruction
+        $display("pc: %h inst: (%h) expanded: ", pc, inst, showInst(inst));
+	    $fflush(stdout);
 
-        //fetch requested pc from mem
-        Data inst <- mem.resp(); 
-
-        // decode
-        dInst <= decode(inst);
-
-        //switch state to Execute
-        state <= Execute;
+        DecodedInst dInst = decode(inst);
+        d2e <= dInst;
     endrule
+    rule execute_cycle(csrf.started && stage_ctrl == Execute);
+    $display("execute_cycle");
 
-    rule doExecute(csrf.started && state == Execute);
-
-        // read general purpose register values 
-        Data rVal1 = rf.rd1(fromMaybe(?, dInst.src1));
-        Data rVal2 = rf.rd2(fromMaybe(?, dInst.src2));
+        stage_ctrl <= WriteBack;
 
         // read CSR values (for CSRR inst)
-        Data csrVal = csrf.rd(fromMaybe(?, dInst.csr));
+        Data csrVal = csrf.rd(fromMaybe(?, d2e.csr));
+        // read general purpose register values 
+        Data rVal1 = rf.rd1(fromMaybe(?, d2e.src1));
+        Data rVal2 = rf.rd2(fromMaybe(?, d2e.src2));
 
-
-        // execute
-        ExecInst e_Inst = exec(dInst, rVal1, rVal2, pc, ?, csrVal);
-        eInst <= e_Inst;  
-        
-        // memory 
-        if(e_Inst.iType == Ld) begin 
-            mem.req(MemReq{op: Ld, addr: e_Inst.addr, data: ?});
-        end else if(e_Inst.iType == St) begin 
-            mem.req(MemReq{op: St, addr: e_Inst.addr, data: e_Inst.data});
-        end
-
-
+        ExecInst eInst = exec(d2e, rVal1, rVal2, pc, ?, csrVal);
         // check unsupported instruction at commit time. Exiting
-        if(e_Inst.iType == Unsupported) begin
+        if(eInst.iType == Unsupported) begin
             $fwrite(stderr, "ERROR: Executing unsupported instruction at pc: %x. Exiting\n", pc);
             $finish;
         end
-
-        //switch state to write back
-        state <= WriteBack;
-
-    endrule
-
-    rule doWriteBack(csrf.started && state == WriteBack);
-
-        //if the instruction is a load, get requested data from mem
-        Data e_data = eInst.data;
-        if (eInst.iType == Ld) begin
-            e_data <- mem.resp();
-        end
-
-        // write back to reg file
-        if(isValid(eInst.dst)) begin
-            rf.wr(fromMaybe(?, eInst.dst), e_data);
-        end
-
-        // update the pc depending on whether the branch is taken or not
+        //PC .if branch hit ,jump.else PC + 4
         pc <= eInst.brTaken ? eInst.addr : pc + 4;
 
-        // CSR write for sending data to host & stats
-        csrf.wr(eInst.iType == Csrw ? eInst.csr : Invalid, e_data);
+        // memory
+        if(eInst.iType == Ld) begin
+            mem.req(MemReq{op: Ld, addr: eInst.addr, data: ?});
+        end else if(eInst.iType == St) begin
+            let d <- mem.req(MemReq{op: St, addr: eInst.addr, data: eInst.data});
+        end
 
-        //switch state back to fetch
-        state <= Fetch;
+        csrf.wr(eInst.iType == Csrw ? eInst.csr : Invalid, eInst.data);
+
+        e2wb <= eInst;
+        
     endrule
+    rule wb_cycle(csrf.started && (stage_ctrl == WriteBack));
 
+        stage_ctrl <= Fetch;
+
+        let ld_data = e2wb.data;
+
+        if (e2wb.iType == Ld) begin
+            ld_data <- mem.resp();
+        end
+        // write back to reg file
+        if(isValid(e2wb.dst))
+            rf.wr(fromMaybe(?, e2wb.dst), ld_data);
+
+        // csrf.wr(e2wb.iType == Csrw ? e2wb.csr : Invalid, e2wb.data);
+    endrule
 
     method ActionValue#(CpuToHostData) cpuToHost;
         let ret <- csrf.cpuToHost;
@@ -130,10 +110,12 @@ module mkProc(Proc);
 
     method Action hostToCpu(Bit#(32) startpc) if ( !csrf.started && memReady );
         csrf.start(0); // only 1 core, id = 0
+	    $display("Start at pc 200\n");
+	    $fflush(stdout);
         pc <= startpc;
     endmethod
 
-	interface iMemInit = dummyInit;
-    interface dMemInit = mem.init;
+    interface MemInit iMemInit = mem.init;
+    interface MemInit dMemInit = mem.init;
 endmodule
 
