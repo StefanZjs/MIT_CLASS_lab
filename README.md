@@ -65,6 +65,10 @@ WSL默认用户名是root，如果不是，那么将代码中的‘root’替换
 3. 个人建议/提示：
 
    指令集学习：初学的话可以不用看完全部指令集，主要是看看JAL/JALR/branch这些命令（这些跟PC控制有关）
+
+   调试：建议在每一个阶段插入$display，打印出对应阶段的调试信息。
+
+   错误排查：在programs/build/XX/dump/目录下会生成很多.dump文件，dump文件中包含了PC和与之对应的指令，可以通过对比打印的调试信息排查错误情况。例如：如果是跳转错误那么PC就对应不上。
 4. Exercise设计：
 
    -- Exercise1：设计一个von Neumann架构的twocycle核，注意此设计是使用一个mem，课程代码提供的onecycle使用了两个mem。
