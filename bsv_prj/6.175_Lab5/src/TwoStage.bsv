@@ -18,9 +18,15 @@ import Ehr::*;
 import CsrFile::*;
 import GetPut::*;
 
+typedef struct {
+    DecodedInst dInst;
+    Addr pc;
+} F2e deriving (Bits, Eq);
+
 (* synthesize *)
 module mkProc(Proc);
-    Reg#(Addr) pc <- mkRegU;
+    Ehr#(2, Addr) pc <- mkEhr(0);
+    // Reg#(Addr) pc <- mkRegU;
     RFile      rf <- mkRFile;
     IMemory  iMem <- mkIMemory;
     DMemory  dMem <- mkDMemory;
@@ -30,7 +36,7 @@ module mkProc(Proc);
     Bool memReady = iMem.init.done() && dMem.init.done();
 
 
-    Fifo#(2, DecodedInst) fd2e <- mkBypassFifo;
+    Fifo#(2, F2e) fd2e <- mkCFFifo;
     // TODO: Complete the implementation of this processor
 
     rule test (!memReady);
@@ -41,21 +47,26 @@ module mkProc(Proc);
 
     rule fetch(csrf.started);
 
-        Data inst = iMem.req(pc);
+        Data inst = iMem.req(pc[0]);
         // decode
         DecodedInst dInst = decode(inst);
 
         // trace - print the instruction
-        $display("pc: %h inst: (%h) expanded: ", pc, inst, showInst(inst));
+        $display("pc: %h inst: (%h) expanded: ", pc[0], inst, showInst(inst));
 	    $fflush(stdout);
-        
-        fd2e.enq(dInst);
+        pc[0] <= pc[0] + 4;
+        fd2e.enq(F2e{
+            dInst: dInst, 
+            pc: pc[0]
+        });
     endrule
 
     rule execute(csrf.started);
-        fd2e.deq;
-        let d_Inst = fd2e.first;
-        let ppc = pc + 4;
+        
+        let f2e_data = fd2e.first;
+        let d_Inst   = f2e_data.dInst;
+        let d_pc     = f2e_data.pc;
+        let ppc      = d_pc + 4;
 
         // read general purpose register values 
         Data rVal1 = rf.rd1(fromMaybe(?, d_Inst.src1));
@@ -64,12 +75,12 @@ module mkProc(Proc);
         // read CSR values (for CSRR inst)
         Data csrVal = csrf.rd(fromMaybe(?, d_Inst.csr));
         // execute
-        ExecInst eInst = exec(d_Inst, rVal1, rVal2, pc, ppc, csrVal);
-        if(eInst.mispredict)
+        ExecInst eInst = exec(d_Inst, rVal1, rVal2, d_pc, ppc, csrVal);
+        if(eInst.mispredict) begin
             fd2e.clear;
-
-        // update the pc depending on whether the branch is taken or not
-        pc <= eInst.mispredict ? eInst.addr : ppc;
+            pc[1] <= eInst.addr;
+        end
+        else fd2e.deq;
 
         // memory
         if(eInst.iType == Ld) begin
@@ -88,7 +99,7 @@ module mkProc(Proc);
 
         // check unsupported instruction at commit time. Exiting
         if(eInst.iType == Unsupported) begin
-            $fwrite(stderr, "ERROR: Executing unsupported instruction at pc: %x. Exiting\n", pc);
+            $fwrite(stderr, "ERROR: Executing unsupported instruction at pc: %x. Exiting\n", d_pc);
             $finish;
         end
     endrule
@@ -103,7 +114,7 @@ module mkProc(Proc);
         csrf.start(0); // only 1 core, id = 0
 	$display("Start at pc 200\n");
 	$fflush(stdout);
-        pc <= startpc;
+        pc[0] <= startpc;
     endmethod
 
     interface MemInit iMemInit = iMem.init;
