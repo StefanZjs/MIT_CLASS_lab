@@ -1,92 +1,83 @@
 // TwoStage.bsv
 //
-// This is a two stage pipelined implementation of the RISC-V processor.
+// This is a two stage pipelined implementation of the SMIPS processor.
 
 import Types::*;
 import ProcTypes::*;
+// import MemTypes::*;
 import CMemTypes::*;
-import MemInit::*;
 import RFile::*;
-import DMemory::*;
 import IMemory::*;
+import DMemory::*;
 import Decode::*;
 import Exec::*;
-import CsrFile::*;
+// import Cop::*;
 import Vector::*;
 import Fifo::*;
 import Ehr::*;
+import CsrFile::*;
 import GetPut::*;
-
-typedef struct {
-	DecodedInst dInst;
-	Addr pc;
-	Addr predPc;
-} Dec2Ex deriving (Bits, Eq);
 
 (* synthesize *)
 module mkProc(Proc);
-    Ehr#(2, Addr) pc <- mkEhrU;
+    Reg#(Addr) pc <- mkRegU;
     RFile      rf <- mkRFile;
-	IMemory  iMem <- mkIMemory;
+    IMemory  iMem <- mkIMemory;
     DMemory  dMem <- mkDMemory;
+    // Cop       cop <- mkCop;
     CsrFile  csrf <- mkCsrFile;
 
-    Fifo#(2, Dec2Ex) d2e <- mkCFFifo;
-
     Bool memReady = iMem.init.done() && dMem.init.done();
+
+
+    Fifo#(2, DecodedInst) fd2e <- mkBypassFifo;
+    // TODO: Complete the implementation of this processor
+
     rule test (!memReady);
-    let e = tagged InitDone;
-    iMem.init.request.put(e);
-    dMem.init.request.put(e);
+        let e = tagged InitDone;
+        iMem.init.request.put(e);
+        dMem.init.request.put(e);
     endrule
 
-    //doFetchDecode < doExecute
-    rule doFetchDecode(csrf.started);
+    rule fetch(csrf.started);
 
-        //fetch instruction from imem then make next pc prediction
-        let inst = iMem.req(pc[0]);
-        Addr ppc = pc[0] + 4; pc[0] <= ppc;
+        Data inst = iMem.req(pc);
+        // decode
+        DecodedInst dInst = decode(inst);
 
-        //decode instruction
-        let dInst = decode(inst);
-
-        d2e.enq(Dec2Ex{pc: pc[0], predPc:ppc, dInst: dInst});
-
-        $display("pc: %h inst: (%h) expanded: ", pc[0], inst, showInst(inst));
-
+        // trace - print the instruction
+        $display("pc: %h inst: (%h) expanded: ", pc, inst, showInst(inst));
+	    $fflush(stdout);
+        
+        fd2e.enq(dInst);
     endrule
 
-    rule doExecute(csrf.started);
-
-        //extract pc, ppc and dInst from d2e
-        let bundle = d2e.first; let inpc = bundle.pc;
-        let dInst = bundle.dInst; let ppc = bundle.predPc;
-
+    rule execute(csrf.started);
+        fd2e.deq;
+        let d_Inst = fd2e.first;
+        let ppc = pc + 4;
 
         // read general purpose register values 
-        Data rVal1 = rf.rd1(fromMaybe(?, dInst.src1));
-        Data rVal2 = rf.rd2(fromMaybe(?, dInst.src2));
+        Data rVal1 = rf.rd1(fromMaybe(?, d_Inst.src1));
+        Data rVal2 = rf.rd2(fromMaybe(?, d_Inst.src2));
 
         // read CSR values (for CSRR inst)
-        Data csrVal = csrf.rd(fromMaybe(?, dInst.csr));
+        Data csrVal = csrf.rd(fromMaybe(?, d_Inst.csr));
+        // execute
+        ExecInst eInst = exec(d_Inst, rVal1, rVal2, pc, ppc, csrVal);
+        if(eInst.mispredict)
+            fd2e.clear;
 
-        // execute (branch prediction with ppc)
-        ExecInst eInst = exec(dInst, rVal1, rVal2, inpc, ppc, csrVal);  
+        // update the pc depending on whether the branch is taken or not
+        pc <= eInst.mispredict ? eInst.addr : ppc;
 
-        // memory 
-        if(eInst.iType == Ld) begin 
+        // memory
+        if(eInst.iType == Ld) begin
             eInst.data <- dMem.req(MemReq{op: Ld, addr: eInst.addr, data: ?});
-        end else if(eInst.iType == St) begin 
+        end else if(eInst.iType == St) begin
             let d <- dMem.req(MemReq{op: St, addr: eInst.addr, data: eInst.data});
         end
 
-
-        // check unsupported instruction at commit time. Exiting
-        if(eInst.iType == Unsupported) begin
-            $fwrite(stderr, "ERROR: Executing unsupported instruction at pc: %x. Exiting\n", inpc);
-            $finish;
-        end
-     
         // write back to reg file
         if(isValid(eInst.dst)) begin
             rf.wr(fromMaybe(?, eInst.dst), eInst.data);
@@ -95,11 +86,11 @@ module mkProc(Proc);
         // CSR write for sending data to host & stats
         csrf.wr(eInst.iType == Csrw ? eInst.csr : Invalid, eInst.data);
 
-        //If branch mispredicted, update pc to correct value and clear d2e
-        if (eInst.mispredict) begin
-            pc[1] <= eInst.addr; d2e.clear; end
-        //else deq bundle from d2e
-        else begin d2e.deq; end
+        // check unsupported instruction at commit time. Exiting
+        if(eInst.iType == Unsupported) begin
+            $fwrite(stderr, "ERROR: Executing unsupported instruction at pc: %x. Exiting\n", pc);
+            $finish;
+        end
     endrule
 
 
@@ -110,10 +101,12 @@ module mkProc(Proc);
 
     method Action hostToCpu(Bit#(32) startpc) if ( !csrf.started && memReady );
         csrf.start(0); // only 1 core, id = 0
-        pc[0] <= startpc;
+	$display("Start at pc 200\n");
+	$fflush(stdout);
+        pc <= startpc;
     endmethod
 
-	interface iMemInit = iMem.init;
-    interface dMemInit = dMem.init;
+    interface MemInit iMemInit = iMem.init;
+    interface MemInit dMemInit = dMem.init;
 endmodule
 
