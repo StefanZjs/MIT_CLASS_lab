@@ -2,6 +2,7 @@
 
 
 asm_tests=(
+	bpred_bht bpred_j bpred_ras
 	simple
 	add addi
 	and andi
@@ -18,7 +19,7 @@ asm_tests=(
 	srl srli
 	sub
 	xor xori
-	bpred_bht bpred_j bpred_ras
+	
 	cache
 	)
 
@@ -44,7 +45,7 @@ for test_name in ${asm_tests[@]}; do
 	cp ${mem_file} bluesim/mem.vmh 
 
 	# run test
-	make run.bluesim > ${log_dir}/${test_name}.log & # run bsim, redirect outputs to log
+	make run.bluesim > ${log_dir}/${test_name}.log  # run bsim, redirect outputs to log
 	sleep ${wait_time}
 	echo ""
 done
