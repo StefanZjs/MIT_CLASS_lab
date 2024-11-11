@@ -52,6 +52,8 @@ WSL默认用户名是root，如果不是，那么将代码中的‘root’替换
 1. 开发环境搭建：
    riscv-gcc编译工具链：github上有prebuild的工具链，直接下载下来解压到/opt/riscv
    elf2hex：可以从此链接获取([elf2hex](https://github.com/riscvarchive/riscv-fesvr))，不过需要编译。我已经编译好并上传了，可以直接下载下来放到/opt/riscv/bin
+
+   测试脚本：2016课程使用的脚本不对，我是参考的[2017]([MIT 6.175 - Constructive Computer Architecture](https://csg.csail.mit.edu/6.175/index.html))
 2. 几个注意事项：
    run_xxx.sh脚本修改：在脚本里去掉这个`&`，如果不去掉，你的测试程序会在后台同时运行好多个，导致仿真时间极长而且会把CPU使用率占到100%。
 
@@ -75,9 +77,12 @@ WSL默认用户名是root，如果不是，那么将代码中的‘root’替换
 
    -- Exercise2：设计一个fourcycle核，注意此设计需要使用一个delayed memory，所以需要在fetch阶段先请求数据，在decode阶段拿到数据（指令）再进行处理。
 
-   -- Exercise3：
+   -- Exercise3/Exercise4：
+   
+      简单讲一下我对分支预测的理解：分支预测就是在‘赌’，赌猜的地址正确，先不管对不对，先按照猜的地址把指令取出来，赌对了就正常执行，赌不对就把之前拿到的错误指令丢掉。
+      
+      Lab5中一开始赌下一个指令是PC+4，在Ex4中使用BTB把执行过的跳转指令记下来，这里就是赌下一个同样的指令会跳转到之前有跳转过的地址（比如：for循环经常跳转到同一个地址），赌错了就更新一次，然后继续赌。
 
-   -- Exercise4：
 5. e
 6. e
 
@@ -86,6 +91,7 @@ WSL默认用户名是root，如果不是，那么将代码中的‘root’替换
 ### rule
 
 - guard : 如果guard不成立，rule内的所有逻辑都不会运行。
+- logic: 在隐式guard的情况下，如果rule内有任何逻辑不成立，整个rule都不会工作！！！
 
 BSC编译：
 
