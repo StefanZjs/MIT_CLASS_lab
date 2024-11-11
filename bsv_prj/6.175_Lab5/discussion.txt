@@ -1,0 +1,73 @@
+Discussion Question 1 (5 Points): 
+    What is the IPC for the two-stage pipelined processor for each benchmark tested by the run_bmarks.sh script?
+IPC = Insts / Cycles
+
+      |median|multiply| qsort | tower |vvadd|
+---------------------------------------------------
+Cycles|5086  | 27007  | 145936| 3940  |2706 |
+Insts |4243  | 20893  | 123496| 3743  |2408 |
+IPC   |0.834 | 0.774  | 0.846 | 0.95  |0.9  |
+
+Discussion Question 2 (5 Points): 
+    What is the formula to compute the next address predictor accuracy from the IPC? 
+    (Hint, how many cycles does it take to execute an instruction when the PC+4 prediction is correct? What about when it is incorrect?) 
+    Using this formula, what is the accuracy of the PC+4 next address predictor for each benchmark?
+
+IPC = Insts / Cycles, Cycles = Insts + (1 - Accuracy) * Insts
+
+-> Accuracy = (2*IPC - 1) / IPC
+
+        |median|multiply| qsort | tower |vvadd|
+------  ---------------------------------------------
+Cycles  |5086  | 27007  | 145936| 3940  |2706 |
+Insts   |4243  | 20893  | 123496| 3743  |2408 |
+IPC     |0.834 | 0.774  | 0.846 | 0.95  |0.9  |
+Accuracy|0.8   | 0.7    | 0.82  | 0.96  |0.89 |
+Discussion Question 3 (5 Points): 
+    What is the IPC for the two-stage pipelined processor with a BTB for each benchmark tested by the run_bmarks.sh script? 
+    How much has it improved over the previous version?
+        |median|multiply| qsort | tower |vvadd|
+------  ---------------------------------------------
+Cycles  |4873  | 21481  | 139506| 3846  |2409 |
+Insts   |4243  | 20893  | 123496| 3743  |2408 |
+IPC     |0.87  | 0.97   | 0.885 | 0.97  |0.99 |
+
+improved| 4.3% | +25.7% | 4.6%  | 1.8%  |11%  |
+
+    
+
+Discussion Question 4 (5 Points): 
+    How does adding the BTB change the performance of the bpred_* microbenchmarks? (Hint: the number of cycles for bpred_j should go down.)
+TWOSTAGE:
+      |bpred_bht|bpred_j| bpred_ras |
+-------------------------------------
+Cycles|   1210  | 3506  | 413       |
+Insts |   1010  | 1806  | 286       |
+
+TWOSTAGEBTB:
+      |bpred_bht|bpred_j| bpred_ras |
+-------------------------------------
+Cycles|   1311  | 1825  | 361       |
+Insts |   1010  | 1806  | 286       |
+
+Discussion Question 5 (Optional): 
+    How long did it take you to complete this lab?
+
+    over 20 hours
+
+Discussion Question 6 (5 Bonus Points): 
+    Look at the assembly source for the bpred_* benchmarks and explain why each benchmark improved, stayed the same, or got worse.
+
+    bpred_bht：in this benchmarks, it has many BRANCH instructions which is difficult to predict.
+
+    bpred_j：in this benchmarks, mostly it jump to constant address which is easy to predict.
+
+    bpred_ras：in this benchmarks,BRANCH prediction does not work much,it mainly J/Jr.
+
+Discussion Question 7 (5 Bonus Points): 
+    How would you improve the BTB to improve the results of bpred_bht?
+
+    A easy way is to Increase the size of BTB.
+
+    or add a forwarding path make BRANCH happen in FETCH stage,but may not improve much.
+
