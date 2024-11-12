@@ -1,0 +1,15 @@
+Discussion Question 1:
+If you actually set the prediction to pc, you will get errors in the assembly tests; the first one will be from cache.riscv.vmh.
+
+What is the error you get?
+    log:ERROR: Executing unsupported instruction at pc: 00004000. Exiting
+
+What is happening in the processor to cause that to happen?
+    Execute finds misprediction: PC = 0000020c
+    Fetch: Mispredict, redirected by Execute
+
+Why do not you get this error with PC+4 and BTB predictors?
+    because set the prediction to pc, in 'Execute' pc will always be equal to ppc.
+    so,there will always be 'mispredict'
+How would you fix it?
+    ppc = pc + 4
