@@ -1,11 +1,12 @@
 #!/bin/bash
 
 asm_tests=(
+	
 	median
 	multiply
 	qsort
-	towers
 	vvadd
+	towers
 	)
 
 vmh_dir=programs/build/benchmarks/vmh

@@ -1,12 +1,11 @@
 #!/bin/bash
 
 asm_tests=(
-	simple
+	jal j  jalr
 	add addi
 	and andi
 	auipc
 	beq bge bgeu blt bltu bne
-	j jal jalr
 	lw
 	lui
 	or ori
@@ -19,6 +18,7 @@ asm_tests=(
 	xor xori
 	bpred_bht bpred_j bpred_ras bpred_j_noloop
 	cache
+	simple
 	)
 
 vmh_dir=programs/build/assembly/vmh
