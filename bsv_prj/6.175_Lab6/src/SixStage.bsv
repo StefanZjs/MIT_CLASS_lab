@@ -85,9 +85,8 @@ module mkProc(Proc);
         // fetch
 		// Data inst = iMem.req(pcReg[0]);
         iMem.req(MemReq{op: Ld, addr: pcReg[0], data: ?});
-        // Addr predPc = pcReg[0] + 4;
         Addr predPc = btb.predPc(pcReg[0]);
-        // pcReg[0] <= predPc;
+        pcReg[0] <= predPc;
         Fetch2Decode f2d = Fetch2Decode{
             pc:pcReg[0],
             predPc:predPc,
@@ -116,7 +115,7 @@ module mkProc(Proc);
         if(!sb.search1(dInst.src1) && !sb.search2(dInst.src2)) begin
             // enq & update PC, sb
             d2rfFifo.enq(d2rf);
-            pcReg[0] <= btb.predPc(pcReg[0]);//f_inst.predPc;
+            // pcReg[0] <= btb.predPc(pcReg[0]);//f_inst.predPc;
             sb.insert(dInst.dst);
             
             $display("Decode: PC = %x, inst = %x, expanded = ", f_inst.pc, inst, showInst(inst));
