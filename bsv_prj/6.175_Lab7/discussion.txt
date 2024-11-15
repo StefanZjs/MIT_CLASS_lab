@@ -1,0 +1,2 @@
+Discussion Question 1 (5 Points): 
+    Record the results for ./run_bmarks.sh withoutcache. What IPC do you see for each benchmark?
