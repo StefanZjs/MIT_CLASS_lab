@@ -33,6 +33,7 @@ module [Module] mkConnectalWrapper#(ConnectalProcIndication ind)(ConnectalWrappe
     DDR3_Client ddrclient = toGPClient( ddr3ReqFifo, ddr3RespFifo );
     mkSimMem(ddrclient);
     Proc m <- mkProc(ddr3ReqFifo, ddr3RespFifo);
+    // Proc m <- mkProc();
 
     rule relayMessage;
 	    let mess <- m.cpuToHost();
