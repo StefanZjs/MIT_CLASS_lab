@@ -1,2 +1,8 @@
 Discussion Question 1 (5 Points): 
     Record the results for ./run_bmarks.sh withoutcache. What IPC do you see for each benchmark?
+    Benchmark median|Benchmark multiply|Benchmark qsort |Benchmark tower|Benchmark vvadd|
+    Cycles = 67872  |Cycles = 334272   |Cycles = 1975920|Cycles = 59872 |Cycles = 38512 |
+    Insts  = 4243   |Insts  = 20893    |Insts  = 123496 |Insts  = 3743  |Insts  = 2408  |
+
+
+Discussion Question 2 (5 Points): Record the results for ./run_bmarks.sh withcache. What IPC do you see for each benchmark?
