@@ -47,3 +47,15 @@ interface Cache;
     method ActionValue#(MemResp) resp;
 endinterface
 
+
+typedef enum {
+    Ready,
+	StartMiss,
+	SendFillReq,
+    WaitFillResp
+} CacheStatus deriving (Bits,Eq);
+
+function CacheIndex getIdx(Addr addr)  = truncate(addr>>6);
+function CacheWordSelect    getOffset(Addr addr) = truncate(addr>> 2);
+function CacheTag   getTag(Addr addr)    = truncateLSB(addr);
+
